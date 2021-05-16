@@ -33,11 +33,7 @@ jobs:
 
     # Update apt
     - name: update apt
-      run: |
-        sudo apt-get update -y -qq --fix-missing
-        sudo apt-get install -y wget gnupg
-        sudo bash -c 'echo deb http://apt.postgresql.org/pub/repos/apt/ focal-pgdg main >> /etc/apt/sources.list.d/pgdg.list'
-        sudo apt update
+      run: sudo apt-get update -y -qq --fix-missing
 
     # Install Postgres
     - name: install postgres

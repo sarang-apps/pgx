@@ -3,21 +3,13 @@
 
 use pgx_utils::pg_config::PgConfig;
 use pgx_utils::{exit_with_error, get_target_dir, handle_result};
-use std::fmt::Write;
 use std::process::{Command, Stdio};
 
-pub fn test_extension(
-    pg_config: &PgConfig,
-    is_release: bool,
-    additional_features: Vec<&str>,
-) -> Result<(), std::io::Error> {
+pub fn test_extension(pg_config: &PgConfig, is_release: bool) -> Result<(), std::io::Error> {
     let major_version = pg_config.major_version()?;
     let target_dir = get_target_dir();
 
     let mut command = Command::new("cargo");
-
-    let mut features = additional_features.join(" ");
-    let _ = write!(&mut features, " pg{} pg_test", major_version);
 
     command
         .stdout(Stdio::inherit())
@@ -25,7 +17,7 @@ pub fn test_extension(
         .arg("test")
         .arg("--all")
         .arg("--features")
-        .arg(features)
+        .arg(format!("pg{} pg_test", major_version))
         .arg("--no-default-features")
         .env("CARGO_TARGET_DIR", &target_dir)
         .env(

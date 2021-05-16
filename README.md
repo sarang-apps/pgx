@@ -139,9 +139,9 @@ Next, `pgx` needs to be initialized.  You only need to do this once.
 $ cargo pgx init
 ```
 
-The `init` command downloads Postgres versions v10, v11, v12, v13, compiles them to `~/.pgx/`, and runs `initdb`.
-These installations are needed by `pgx` not only for auto-generating Rust bindings from each version's header files,
-but also for `pgx`'s test framework.
+The `init` command downloads Postgres versions v10, v11, v12, v13 and compiles them to `~/.pgx/`.  These installations
+are needed by `pgx` not only for auto-generating Rust bindings from each version's header files, but also for `pgx`'s
+test framework.
 
 See the documentation for [`cargo-pgx`](cargo-pgx/README.md) for details on how to limit the required postgres versions.
 
@@ -218,8 +218,6 @@ There's probably more than are listed here, but a primary things of note are:
  - Not all of Postgres' internals are included or even wrapped.  This isn't due to it not being possible, it's simply due to it being an incredibly large task.  If you identify internal Postgres APIs you need, open an issue and we'll get them exposed, at least through the `pgx::pg_sys` module.
 
  - Windows is not supported.  It could be, but will require a bit of work with `cargo-pgx` and figuring out how to compile `pgx`'s "cshim" static library.
-
- - Sessions started before `ALTER EXTENSION my_extension UPDATE;` will continue to see the old version of `my_extension`. New sessions will see the updated version of the extension.
 
 ## TODO
 

@@ -1,4 +1,4 @@
-#! /usr/bin/env bash
+#! /bin/sh
 
 # requires: https://github.com/sunng87/cargo-release
 

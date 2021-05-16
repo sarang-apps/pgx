@@ -15,7 +15,6 @@ pub(crate) fn install_extension(
     pg_config: &PgConfig,
     is_release: bool,
     base_directory: Option<PathBuf>,
-    additional_features: Vec<&str>,
 ) -> Result<(), std::io::Error> {
     let base_directory = base_directory.unwrap_or("/".into());
     let (control_file, extname) = find_control_file();
@@ -28,7 +27,7 @@ pub(crate) fn install_extension(
         )
     }
 
-    build_extension(major_version, is_release, &*additional_features);
+    build_extension(major_version, is_release);
 
     println!();
     println!("installing extension");
@@ -51,15 +50,12 @@ pub(crate) fn install_extension(
     }
 
     {
-        handle_result!(
-            crate::generate_schema(&*additional_features),
-            "failed to generate SQL schema"
-        );
+        handle_result!(crate::generate_schema(), "failed to generate SQL schema");
     }
 
     copy_sql_files(&extdir, &extname, &base_directory);
 
-    println!("{} installing {}", "     Finished".bold().green(), extname);
+    println!("{} installing {}", "    Finished".bold().green(), extname);
     Ok(())
 }
 
@@ -76,7 +72,7 @@ fn copy_file(src: PathBuf, dest: PathBuf, msg: &str) {
 
     println!(
         "{} {} to `{}`",
-        "      Copying".bold().green(),
+        "     Copying".bold().green(),
         msg,
         format_display_path(&dest)
     );
@@ -87,16 +83,9 @@ fn copy_file(src: PathBuf, dest: PathBuf, msg: &str) {
     );
 }
 
-fn build_extension(major_version: u16, is_release: bool, additional_features: &[&str]) {
-    let mut features =
-        std::env::var("PGX_BUILD_FEATURES").unwrap_or(format!("pg{}", major_version));
+fn build_extension(major_version: u16, is_release: bool) {
+    let features = std::env::var("PGX_BUILD_FEATURES").unwrap_or(format!("pg{}", major_version));
     let flags = std::env::var("PGX_BUILD_FLAGS").unwrap_or_default();
-    if !additional_features.is_empty() {
-        use std::fmt::Write;
-        let mut additional_features = additional_features.join(" ");
-        let _ = write!(&mut additional_features, " {}", features);
-        features = additional_features
-    }
     let mut command = Command::new("cargo");
     command.arg("build");
     if is_release {
@@ -140,7 +129,7 @@ pub(crate) fn write_full_schema_file(dir: &PathBuf, extdir: Option<&PathBuf>) {
     let mut sql = std::fs::File::create(&target_filename).unwrap();
     println!(
         "{} extension schema to `{}`",
-        "      Writing".bold().green(),
+        "     Writing".bold().green(),
         format_display_path(&target_filename)
     );
 

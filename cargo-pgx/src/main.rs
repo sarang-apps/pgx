@@ -58,24 +58,20 @@ fn do_it() -> std::result::Result<(), std::io::Error> {
                     init_pgx(&Pgx::default(SUPPORTED_MAJOR_VERSIONS)?)
                 } else {
                     // user specified arguments, so we'll only install those versions of Postgres
-                    let mut default_pgx = None;
+                    let default_pgx = Pgx::default(SUPPORTED_MAJOR_VERSIONS)?;
                     let mut pgx = Pgx::new();
 
-                    for (pgver, pg_config_path) in versions {
-                        let config = if pg_config_path == "download" {
-                            if default_pgx.is_none() {
-                                default_pgx = Some(Pgx::default(SUPPORTED_MAJOR_VERSIONS)?);
-                            }
+                    for pg_config in versions.into_iter().map(|(pgver, pg_config_path)| {
+                        if pg_config_path == "download" {
                             default_pgx
-                                .as_ref()
-                                .unwrap() // We just set this
                                 .get(&pgver)
                                 .expect(&format!("{} is not a known Postgres version", pgver))
                                 .clone()
                         } else {
                             PgConfig::new(pg_config_path.into())
-                        };
-                        pgx.push(config);
+                        }
+                    }) {
+                        pgx.push(pg_config);
                     }
 
                     init_pgx(&pgx)
@@ -132,10 +128,6 @@ fn do_it() -> std::result::Result<(), std::io::Error> {
             }
             ("install", Some(install)) => {
                 let is_release = install.is_present("release");
-                let features = install
-                    .values_of("features")
-                    .map(|v| v.collect())
-                    .unwrap_or(vec![]);
                 let pg_config = match std::env::var("PGX_TEST_MODE_VERSION") {
                     // for test mode, we want the pg_config specified in PGX_TEST_MODE_VERSION
                     Ok(pgver) => match Pgx::from_config()?.get(&pgver) {
@@ -151,17 +143,13 @@ fn do_it() -> std::result::Result<(), std::io::Error> {
                     Err(_) => PgConfig::from_path(),
                 };
 
-                install_extension(&pg_config, is_release, None, features)
+                install_extension(&pg_config, is_release, None)
             }
             ("package", Some(package)) => {
                 let is_debug = package.is_present("debug");
-                let features = package
-                    .values_of("features")
-                    .map(|v| v.collect())
-                    .unwrap_or(vec![]);
                 let pg_config = PgConfig::from_path(); // use whatever "pg_config" is on the path
 
-                package_extension(&pg_config, is_debug, features)
+                package_extension(&pg_config, is_debug)
             }
             ("run", Some(run)) => {
                 let pgver = run
@@ -171,17 +159,8 @@ fn do_it() -> std::result::Result<(), std::io::Error> {
                     || get_property("extname").expect("could not determine extension name"),
                     |v| v.to_string(),
                 );
-                let features = run
-                    .values_of("features")
-                    .map(|v| v.collect())
-                    .unwrap_or(vec![]);
                 let is_release = run.is_present("release");
-                run_psql(
-                    Pgx::from_config()?.get(pgver)?,
-                    &dbname,
-                    is_release,
-                    features,
-                )
+                run_psql(Pgx::from_config()?.get(pgver)?, &dbname, is_release)
             }
             ("connect", Some(run)) => {
                 let pgver = run
@@ -196,33 +175,19 @@ fn do_it() -> std::result::Result<(), std::io::Error> {
             ("test", Some(test)) => {
                 let is_release = test.is_present("release");
                 let pgver = test.value_of("pg_version").unwrap_or("all");
-                let features = test
-                    .values_of("features")
-                    .map(|v| v.collect())
-                    .unwrap_or(vec![]);
                 let pgx = Pgx::from_config()?;
                 for pg_config in pgx.iter(PgConfigSelector::new(pgver)) {
-                    test_extension(pg_config?, is_release, features.clone())?
+                    test_extension(pg_config?, is_release)?
                 }
                 Ok(())
             }
-            ("schema", Some(schema)) => {
-                let features = schema
-                    .values_of("features")
-                    .map(|v| v.collect())
-                    .unwrap_or(vec![]);
-                generate_schema(&*features)
-            }
+            ("schema", Some(_schema)) => generate_schema(),
             ("dump-schema", Some(dump_schema)) => {
                 let dir = dump_schema
                     .value_of("directory")
                     .expect("the directory argument is required")
                     .into();
-                let features = dump_schema
-                    .values_of("features")
-                    .map(|v| v.collect())
-                    .unwrap_or(vec![]);
-                generate_schema(&*features)?;
+                generate_schema()?;
                 write_full_schema_file(&dir, None);
                 Ok(())
             }

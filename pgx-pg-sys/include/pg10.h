@@ -9,8 +9,6 @@
 
 #include "access/amapi.h"
 #include "access/genam.h"
-#include "access/gin.h"
-#include "access/gist.h"
 #include "access/heapam.h"
 #include "access/htup.h"
 #include "access/htup_details.h"

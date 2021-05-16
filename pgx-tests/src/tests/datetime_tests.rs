@@ -1,6 +1,7 @@
 // Copyright 2020 ZomboDB, LLC <zombodb@gmail.com>. All rights reserved. Use of this source code is
 // governed by the MIT license that can be found in the LICENSE file.
 
+
 use pgx::*;
 use time::UtcOffset;
 
@@ -111,6 +112,13 @@ mod tests {
     use crate as pgx_tests;
 
     use pgx::*;
+
+    #[pg_test]
+    fn test_is_timezone_utc() {
+        let timezone = Spi::get_one::<&str>("select current_setting('timezone');")
+            .expect("failed to get SPI result");
+        assert_eq!("UTC", timezone);
+    }
 
     #[pg_test]
     fn test_accept_date_now() {

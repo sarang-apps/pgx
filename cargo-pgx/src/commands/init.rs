@@ -11,7 +11,6 @@ use rttp_client::{types::Proxy, HttpClient};
 use std::fs::File;
 use std::io::Write;
 use std::path::PathBuf;
-use std::process::Stdio;
 
 use std::sync::{Arc, Mutex};
 
@@ -70,23 +69,16 @@ pub(crate) fn init_pgx(pgx: &Pgx) -> std::result::Result<(), std::io::Error> {
             )
     });
     for pg_config in output_configs.iter() {
-        validate_pg_config(pg_config)?;
-
-        let datadir = pg_config.data_dir()?;
-        let bindir = pg_config.bin_dir()?;
-        if !datadir.exists() {
-            initdb(&bindir, &datadir)?;
-        }
+        validate_pg_config(pg_config)?
     }
 
-    write_config(output_configs)?;
-    Ok(())
+    write_config(output_configs)
 }
 
 fn download_postgres(pg_config: &PgConfig, pgxdir: &PathBuf) -> Result<PgConfig, std::io::Error> {
     println!(
         "{} Postgres v{}.{} from {}",
-        "  Downloading".bold().green(),
+        " Downloading".bold().green(),
         pg_config.major_version()?,
         pg_config.minor_version()?,
         pg_config.url().expect("no url"),
@@ -127,14 +119,14 @@ fn untar(bytes: &[u8], pgxdir: &PathBuf, pg_config: &PgConfig) -> Result<PathBuf
     ));
     if pgdir.exists() {
         // delete everything at this path if it already exists
-        println!("{} {}", "     Removing".bold().green(), pgdir.display());
+        println!("{} {}", "    Removing".bold().green(), pgdir.display());
         std::fs::remove_dir_all(&pgdir)?;
     }
     std::fs::create_dir_all(&pgdir)?;
 
     println!(
         "{} Postgres v{}.{} to {}",
-        "    Untarring".bold().green(),
+        "   Untarring".bold().green(),
         pg_config.major_version()?,
         pg_config.minor_version()?,
         pgdir.display()
@@ -168,7 +160,7 @@ fn untar(bytes: &[u8], pgxdir: &PathBuf, pg_config: &PgConfig) -> Result<PathBuf
 fn configure_postgres(pg_config: &PgConfig, pgdir: &PathBuf) -> Result<(), std::io::Error> {
     println!(
         "{} Postgres v{}.{}",
-        "  Configuring".bold().green(),
+        " Configuring".bold().green(),
         pg_config.major_version()?,
         pg_config.minor_version()?
     );
@@ -213,7 +205,7 @@ fn make_postgres(pg_config: &PgConfig, pgdir: &PathBuf) -> Result<(), std::io::E
     let num_cpus = 1.max(num_cpus::get() / 3);
     println!(
         "{} Postgres v{}.{}",
-        "    Compiling".bold().green(),
+        "   Compiling".bold().green(),
         pg_config.major_version()?,
         pg_config.minor_version()?
     );
@@ -253,7 +245,7 @@ fn make_postgres(pg_config: &PgConfig, pgdir: &PathBuf) -> Result<(), std::io::E
 fn make_install_postgres(version: &PgConfig, pgdir: &PathBuf) -> Result<PgConfig, std::io::Error> {
     println!(
         "{} Postgres v{}.{} to {}",
-        "   Installing".bold().green(),
+        "  Installing".bold().green(),
         version.major_version()?,
         version.minor_version()?,
         get_pg_installdir(pgdir).display()
@@ -295,7 +287,7 @@ fn make_install_postgres(version: &PgConfig, pgdir: &PathBuf) -> Result<PgConfig
 fn validate_pg_config(pg_config: &PgConfig) -> Result<(), std::io::Error> {
     println!(
         "{} {}",
-        "   Validating".bold().green(),
+        "  Validating".bold().green(),
         pg_config.path().expect("no path for pg_config").display()
     );
 
@@ -326,31 +318,4 @@ fn get_pg_installdir(pgdir: &PathBuf) -> PathBuf {
     let mut dir = PathBuf::from(pgdir);
     dir.push("pgx-install");
     dir
-}
-
-pub(crate) fn initdb(bindir: &PathBuf, datadir: &PathBuf) -> Result<(), std::io::Error> {
-    println!(
-        " {} data directory at {}",
-        "Initializing".bold().green(),
-        datadir.display()
-    );
-    let mut command = std::process::Command::new(format!("{}/initdb", bindir.display()));
-    command
-        .stdout(Stdio::piped())
-        .stderr(Stdio::piped())
-        .arg("-D")
-        .arg(&datadir);
-
-    let command_str = format!("{:?}", command);
-    let output = command.output()?;
-
-    if !output.status.success() {
-        exit_with_error!(
-            "problem running initdb: {}\n{}",
-            command_str,
-            String::from_utf8(output.stderr).unwrap()
-        )
-    }
-
-    Ok(())
 }
